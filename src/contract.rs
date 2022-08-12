@@ -22,6 +22,7 @@ pub fn instantiate(
         owner: deps.api.addr_validate(&msg.owner)?,
     };
     CONTRACT_INFO.save(deps.storage, &contract_info)?;
+    FEE_COLLECTED.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::new().add_attribute("method", "instantiate"))
 }
@@ -53,7 +54,10 @@ fn withdraw_all(
     deps: DepsMut,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
-    let amount = WITHDRAWABLE.load(deps.storage, info.sender.clone())?;
+    let amount = match WITHDRAWABLE.load(deps.storage, info.sender.clone()) {
+        Ok(val) => val,
+        Err(_err) => Uint128::zero()
+    };
 
     return _withdraw(deps, info, amount);
 }
@@ -71,7 +75,7 @@ fn withdraw_fee(
     }
 
     let fee = FEE_COLLECTED.load(deps.storage)?;
-    FEE_COLLECTED.save(deps.storage, &Uint128::from(0u128))?;
+    FEE_COLLECTED.save(deps.storage, &Uint128::zero())?;
 
     let msgs: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: token.to_string(),
@@ -99,7 +103,10 @@ fn _withdraw(
         }));
     }
 
-    let withdrawable = WITHDRAWABLE.load(deps.storage, info.sender.clone())?;
+    let withdrawable = match WITHDRAWABLE.load(deps.storage, info.sender.clone()) {
+        Ok(val) => val,
+        Err(_err) => Uint128::zero()
+    };
     if amount > withdrawable {
         return Err(ContractError::Std(StdError::GenericErr {
             msg: "Insufficient amount".to_string(),
@@ -155,8 +162,14 @@ fn deposit(
             let amount1 = amount / Uint128::from(2u128);
             let amount2 = amount - amount1;
 
-            let withdrawable1 = WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&addr1)?)?;
-            let withdrawable2 = WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&addr2)?)?;
+            let withdrawable1 = match WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&addr1)?) {
+                Ok(val) => val,
+                Err(_err) => Uint128::zero()
+            };
+            let withdrawable2 = match WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&addr2)?) {
+                Ok(val) => val,
+                Err(_err) => Uint128::zero()
+            };
 
             WITHDRAWABLE.save(deps.storage, deps.api.addr_validate(&addr1)?, &(withdrawable1 + amount1))?;
             WITHDRAWABLE.save(deps.storage, deps.api.addr_validate(&addr2)?, &(withdrawable2 + amount2))?;
@@ -182,7 +195,10 @@ fn get_owner(deps: Deps) -> StdResult<String> {
 }
 
 fn withdrawable(deps: Deps, msg: WithdrawableMsg) -> StdResult<Uint128> {
-    let amount = WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&msg.addr)?)?;
+    let amount = match WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&msg.addr)?) {
+        Ok(val) => val,
+        Err(_err) => Uint128::zero()
+    };
 
     Ok(amount)
 }
