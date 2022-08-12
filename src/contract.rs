@@ -115,18 +115,13 @@ fn _withdraw(
 
     WITHDRAWABLE.save(deps.storage, info.sender.clone(), &(withdrawable - amount))?;
 
-    // take 5% fee
-    let fee = Uint128::from(amount.u128() * 50u128 / 1000u128);
-    let total_fee = FEE_COLLECTED.load(deps.storage)? + fee;
-    FEE_COLLECTED.save(deps.storage, &total_fee)?;
-
     // Handle the real "withdraw"
     let recipient = deps.api.addr_validate(info.sender.as_str())?;
     let msgs: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: token.to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Transfer {
             recipient: recipient.to_string(),
-            amount: amount - fee,
+            amount: amount,
         })?,
         funds: vec![],
     })];
@@ -158,9 +153,14 @@ fn deposit(
                 }));
             }
 
+            let fee = Uint128::from(amount.u128() * 50u128 / 1000u128);
+            let total_fee = FEE_COLLECTED.load(deps.storage)? + fee;
+            FEE_COLLECTED.save(deps.storage, &total_fee)?;
+            let send_amount = amount - fee;
+
             // Handle the real "deposit".
-            let amount1 = amount / Uint128::from(2u128);
-            let amount2 = amount - amount1;
+            let amount1 = send_amount / Uint128::from(2u128);
+            let amount2 = send_amount - amount1;
 
             let withdrawable1 = match WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&addr1)?) {
                 Ok(val) => val,

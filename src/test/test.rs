@@ -58,9 +58,9 @@ fn execute_deposit() {
     execute(deps.as_mut(), mock_env(), deposit_info, deposit_msg).unwrap();
 
     let withdrawable1: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable(WithdrawableMsg{ addr: "addr0002".to_string() })).unwrap()).unwrap();
-    assert_eq!(Uint128::from(50u128), withdrawable1);
+    assert_eq!(Uint128::from(47u128), withdrawable1);
     let withdrawable2: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable(WithdrawableMsg{ addr: "addr0003".to_string() })).unwrap()).unwrap();
-    assert_eq!(Uint128::from(50u128), withdrawable2);
+    assert_eq!(Uint128::from(48u128), withdrawable2);
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn execute_withdraw() {
     let res = execute(deps.as_mut(), mock_env(), withdraw_info, withdraw_msg).unwrap();
 
     let withdrawable: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable(WithdrawableMsg{ addr: "addr0002".to_string() })).unwrap()).unwrap();
-    assert_eq!(Uint128::from(200u128), withdrawable);
+    assert_eq!(Uint128::from(175u128), withdrawable);
 
     let msg_transfer = res.messages.get(0).expect("no message");
     assert_eq!(
@@ -111,7 +111,7 @@ fn execute_withdraw() {
             contract_addr: "asset0001".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0002".to_string(),
-                amount: Uint128::from(285u128),
+                amount: Uint128::from(300u128),
             })
             .unwrap(),
             funds: vec![],
@@ -210,12 +210,6 @@ fn execute_withdraw_fee() {
 
     execute(deps.as_mut(), mock_env(), deposit_info, deposit_msg).unwrap();
 
-    let withdraw_msg = ExecuteMsg::WithdrawAll(WithdrawAllMsg{});
-
-    let withdraw_info = mock_info("addr0002", &[]);
-
-    execute(deps.as_mut(), mock_env(), withdraw_info, withdraw_msg).unwrap();
-
     let withdraw_fee_msg = ExecuteMsg::WithdrawFee(WithdrawFeeMsg{});
 
     let withdraw_fee_info = mock_info("addr0000", &[]);
@@ -228,7 +222,7 @@ fn execute_withdraw_fee() {
             contract_addr: "asset0001".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
-                amount: Uint128::from(25u128),
+                amount: Uint128::from(50u128),
             })
             .unwrap(),
             funds: vec![],
