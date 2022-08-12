@@ -14,6 +14,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     Withdraw(WithdrawMsg),
     WithdrawAll(WithdrawAllMsg),
+    WithdrawFee(WithdrawFeeMsg),
     Receive(Cw20ReceiveMsg),
 }
 
@@ -29,6 +30,10 @@ pub enum QueryMsg {
 pub struct WithdrawMsg {
     pub amount: Uint128,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct WithdrawFeeMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

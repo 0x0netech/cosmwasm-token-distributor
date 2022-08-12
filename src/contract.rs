@@ -35,7 +35,8 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Withdraw(msg) => withdraw(deps, info, msg),
-        ExecuteMsg::WithdrawAll(msg) => withdraw_all(deps, info, msg),
+        ExecuteMsg::WithdrawAll(_msg) => withdraw_all(deps, info),
+        ExecuteMsg::WithdrawFee(_msg) => withdraw_fee(deps, info),
         ExecuteMsg::Receive(msg) => deposit(deps, info, msg),
     }
 }
@@ -51,11 +52,37 @@ fn withdraw(
 fn withdraw_all(
     deps: DepsMut,
     info: MessageInfo,
-    _msg: WithdrawAllMsg,
 ) -> Result<Response, ContractError> {
     let amount = WITHDRAWABLE.load(deps.storage, info.sender.clone())?;
 
     return _withdraw(deps, info, amount);
+}
+
+fn withdraw_fee(
+    deps: DepsMut,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+    let contract_info = CONTRACT_INFO.load(deps.storage)?;
+    let token = contract_info.token;
+
+    // validate owner
+    if contract_info.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let fee = FEE_COLLECTED.load(deps.storage)?;
+    FEE_COLLECTED.save(deps.storage, &Uint128::from(0u128))?;
+
+    let msgs: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: token.to_string(),
+        msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            recipient: info.sender.to_string(),
+            amount: fee,
+        })?,
+        funds: vec![],
+    })];
+
+    Ok(Response::default().add_messages(msgs))
 }
 
 fn _withdraw(
