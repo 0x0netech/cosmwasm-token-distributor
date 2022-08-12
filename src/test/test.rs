@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 
 use crate::contract::{instantiate, execute, query};
-use crate::msg::{InstantiateMsg, ExecuteMsg, QueryMsg, Cw20HookMsg, DepositMsg, WithdrawableMsg, WithdrawMsg, WithdrawAllMsg, WithdrawFeeMsg};
+use crate::msg::{InstantiateMsg, ExecuteMsg, QueryMsg, Cw20HookMsg};
 use crate::error::{ContractError};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
@@ -23,7 +23,7 @@ fn proper_initialization() {
 
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    let owner: String = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Owner()).unwrap()).unwrap();
+    let owner: String = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Owner{}).unwrap()).unwrap();
     assert_eq!("addr0000".to_string(), owner);
 }
 
@@ -47,10 +47,10 @@ fn execute_deposit() {
 
     let deposit_msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::Deposit(DepositMsg{
+        msg: to_binary(&Cw20HookMsg::Deposit{
             addr1: "addr0002".to_string(),
             addr2: "addr0003".to_string(),
-        })).unwrap(),
+        }).unwrap(),
         amount: Uint128::from(100u128),
     });
 
@@ -58,9 +58,9 @@ fn execute_deposit() {
 
     execute(deps.as_mut(), mock_env(), deposit_info, deposit_msg).unwrap();
 
-    let withdrawable1: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable(WithdrawableMsg{ addr: "addr0002".to_string() })).unwrap()).unwrap();
+    let withdrawable1: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable{ addr: "addr0002".to_string() }).unwrap()).unwrap();
     assert_eq!(Uint128::from(47u128), withdrawable1);
-    let withdrawable2: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable(WithdrawableMsg{ addr: "addr0003".to_string() })).unwrap()).unwrap();
+    let withdrawable2: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable{ addr: "addr0003".to_string() }).unwrap()).unwrap();
     assert_eq!(Uint128::from(48u128), withdrawable2);
 }
 
@@ -86,10 +86,10 @@ fn execute_withdraw() {
 
     let deposit_msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::Deposit(DepositMsg{
+        msg: to_binary(&Cw20HookMsg::Deposit{
             addr1: "addr0002".to_string(),
             addr2: "addr0003".to_string(),
-        })).unwrap(),
+        }).unwrap(),
         amount: Uint128::from(1000u128),
     });
 
@@ -97,13 +97,13 @@ fn execute_withdraw() {
 
     execute(deps.as_mut(), mock_env(), deposit_info, deposit_msg).unwrap();
 
-    let withdraw_msg = ExecuteMsg::Withdraw(WithdrawMsg{ amount: Uint128::from(300u128) });
+    let withdraw_msg = ExecuteMsg::Withdraw{ amount: Uint128::from(300u128) };
 
     let withdraw_info = mock_info("addr0002", &[]);
 
     let res = execute(deps.as_mut(), mock_env(), withdraw_info, withdraw_msg).unwrap();
 
-    let withdrawable: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable(WithdrawableMsg{ addr: "addr0002".to_string() })).unwrap()).unwrap();
+    let withdrawable: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable{ addr: "addr0002".to_string() }).unwrap()).unwrap();
     assert_eq!(Uint128::from(175u128), withdrawable);
 
     let msg_transfer = res.messages.get(0).expect("no message");
@@ -143,10 +143,10 @@ fn execute_withdraw_all() {
 
     let deposit_msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::Deposit(DepositMsg{
+        msg: to_binary(&Cw20HookMsg::Deposit{
             addr1: "addr0002".to_string(),
             addr2: "addr0003".to_string(),
-        })).unwrap(),
+        }).unwrap(),
         amount: Uint128::from(1000u128),
     });
 
@@ -154,13 +154,13 @@ fn execute_withdraw_all() {
 
     execute(deps.as_mut(), mock_env(), deposit_info, deposit_msg).unwrap();
 
-    let withdraw_msg = ExecuteMsg::WithdrawAll(WithdrawAllMsg{});
+    let withdraw_msg = ExecuteMsg::WithdrawAll{};
 
     let withdraw_info = mock_info("addr0002", &[]);
 
     let res = execute(deps.as_mut(), mock_env(), withdraw_info, withdraw_msg).unwrap();
 
-    let withdrawable: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable(WithdrawableMsg{ addr: "addr0002".to_string() })).unwrap()).unwrap();
+    let withdrawable: Uint128 = from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Withdrawable{ addr: "addr0002".to_string() }).unwrap()).unwrap();
     assert_eq!(Uint128::zero(), withdrawable);
 
     let msg_transfer = res.messages.get(0).expect("no message");
@@ -200,10 +200,10 @@ fn execute_withdraw_fee() {
 
     let deposit_msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::Deposit(DepositMsg{
+        msg: to_binary(&Cw20HookMsg::Deposit{
             addr1: "addr0002".to_string(),
             addr2: "addr0003".to_string(),
-        })).unwrap(),
+        }).unwrap(),
         amount: Uint128::from(1000u128),
     });
 
@@ -211,7 +211,7 @@ fn execute_withdraw_fee() {
 
     execute(deps.as_mut(), mock_env(), deposit_info, deposit_msg).unwrap();
 
-    let withdraw_fee_msg = ExecuteMsg::WithdrawFee(WithdrawFeeMsg{});
+    let withdraw_fee_msg = ExecuteMsg::WithdrawFee{};
 
     let withdraw_fee_info = mock_info("addr0001", &[]);
 

@@ -7,7 +7,7 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::error::ContractError;
-use crate::msg::{Cw20HookMsg, DepositMsg, ExecuteMsg, InstantiateMsg, QueryMsg, WithdrawMsg, WithdrawableMsg};
+use crate::msg::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{ContractInfo, CONTRACT_INFO, WITHDRAWABLE, FEE_COLLECTED};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -35,28 +35,20 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Withdraw(msg) => withdraw(deps, info, msg),
-        ExecuteMsg::WithdrawAll(_msg) => withdraw_all(deps, info),
-        ExecuteMsg::WithdrawFee(_msg) => withdraw_fee(deps, info),
+        ExecuteMsg::Withdraw { amount } => _withdraw(deps, info, amount),
+        ExecuteMsg::WithdrawAll {} => withdraw_all(deps, info),
+        ExecuteMsg::WithdrawFee {} => withdraw_fee(deps, info),
         ExecuteMsg::Receive(msg) => deposit(deps, info, msg),
     }
-}
-
-fn withdraw(
-    deps: DepsMut,
-    info: MessageInfo,
-    msg: WithdrawMsg,
-) -> Result<Response, ContractError> {
-    return _withdraw(deps, info, msg.amount);
 }
 
 fn withdraw_all(
     deps: DepsMut,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
-    let amount = match WITHDRAWABLE.load(deps.storage, info.sender.clone()) {
-        Ok(val) => val,
-        Err(_err) => Uint128::zero()
+    let amount = match WITHDRAWABLE.may_load(deps.storage, info.sender.clone())? {
+        Some(val) => val,
+        None => Uint128::zero()
     };
 
     return _withdraw(deps, info, amount);
@@ -103,9 +95,9 @@ fn _withdraw(
         }));
     }
 
-    let withdrawable = match WITHDRAWABLE.load(deps.storage, info.sender.clone()) {
-        Ok(val) => val,
-        Err(_err) => Uint128::zero()
+    let withdrawable = match WITHDRAWABLE.may_load(deps.storage, info.sender.clone())? {
+        Some(val) => val,
+        None => Uint128::zero()
     };
     if amount > withdrawable {
         return Err(ContractError::Std(StdError::GenericErr {
@@ -141,11 +133,7 @@ fn deposit(
 
     // Deserialize the message for the params
     match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::Deposit(msg)) => {
-            let DepositMsg {
-                addr1,
-                addr2,
-            } = msg;
+        Ok(Cw20HookMsg::Deposit { addr1, addr2 }) => {
             // Validations
             if token_contract != contract_info.token {
                 return Err(ContractError::Std(StdError::GenericErr {
@@ -162,13 +150,13 @@ fn deposit(
             let amount1 = send_amount / Uint128::from(2u128);
             let amount2 = send_amount - amount1;
 
-            let withdrawable1 = match WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&addr1)?) {
-                Ok(val) => val,
-                Err(_err) => Uint128::zero()
+            let withdrawable1 = match WITHDRAWABLE.may_load(deps.storage, deps.api.addr_validate(&addr1)?)? {
+                Some(val) => val,
+                None => Uint128::zero()
             };
-            let withdrawable2 = match WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&addr2)?) {
-                Ok(val) => val,
-                Err(_err) => Uint128::zero()
+            let withdrawable2 = match WITHDRAWABLE.may_load(deps.storage, deps.api.addr_validate(&addr2)?)? {
+                Some(val) => val,
+                None => Uint128::zero()
             };
 
             WITHDRAWABLE.save(deps.storage, deps.api.addr_validate(&addr1)?, &(withdrawable1 + amount1))?;
@@ -183,8 +171,8 @@ fn deposit(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Owner() => to_binary(&get_owner(deps)?),
-        QueryMsg::Withdrawable(msg) => to_binary(&withdrawable(deps, msg)?),
+        QueryMsg::Owner {} => to_binary(&get_owner(deps)?),
+        QueryMsg::Withdrawable { addr } => to_binary(&withdrawable(deps, addr)?),
     }
 }
 
@@ -194,11 +182,9 @@ fn get_owner(deps: Deps) -> StdResult<String> {
     Ok(contract_info.owner.to_string())
 }
 
-fn withdrawable(deps: Deps, msg: WithdrawableMsg) -> StdResult<Uint128> {
-    let amount = match WITHDRAWABLE.load(deps.storage, deps.api.addr_validate(&msg.addr)?) {
-        Ok(val) => val,
-        Err(_err) => Uint128::zero()
-    };
-
-    Ok(amount)
+fn withdrawable(deps: Deps, addr: String) -> StdResult<Uint128> {
+    match WITHDRAWABLE.may_load(deps.storage, deps.api.addr_validate(&addr)?)? {
+        Some(val) => Ok(val),
+        None => Ok(Uint128::zero())
+    }
 }
