@@ -5,6 +5,7 @@ use cosmwasm_std::{
 
 use crate::contract::{instantiate, execute, query};
 use crate::msg::{InstantiateMsg, ExecuteMsg, QueryMsg, Cw20HookMsg, DepositMsg, WithdrawableMsg, WithdrawMsg, WithdrawAllMsg, WithdrawFeeMsg};
+use crate::error::{ContractError};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::test::mock_querier::mock_dependencies;
@@ -211,6 +212,14 @@ fn execute_withdraw_fee() {
     execute(deps.as_mut(), mock_env(), deposit_info, deposit_msg).unwrap();
 
     let withdraw_fee_msg = ExecuteMsg::WithdrawFee(WithdrawFeeMsg{});
+
+    let withdraw_fee_info = mock_info("addr0001", &[]);
+
+    let res = execute(deps.as_mut(), mock_env(), withdraw_fee_info, withdraw_fee_msg.clone()).unwrap_err();
+    match res {
+        ContractError::Unauthorized {} => (),
+        _ => panic!("DO NOT ENTER HERE"),
+    }
 
     let withdraw_fee_info = mock_info("addr0000", &[]);
 
