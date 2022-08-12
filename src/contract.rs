@@ -8,7 +8,7 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::error::ContractError;
 use crate::msg::{Cw20HookMsg, DepositMsg, ExecuteMsg, InstantiateMsg, QueryMsg, WithdrawMsg, WithdrawAllMsg, WithdrawableMsg};
-use crate::state::{ContractInfo, CONTRACT_INFO, WITHDRAWABLE};
+use crate::state::{ContractInfo, CONTRACT_INFO, WITHDRAWABLE, FEE_COLLECTED};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -81,13 +81,18 @@ fn _withdraw(
 
     WITHDRAWABLE.save(deps.storage, info.sender.clone(), &(withdrawable - amount))?;
 
+    // take 5% fee
+    let fee = Uint128::from(amount.u128() * 50u128 / 1000u128);
+    let total_fee = FEE_COLLECTED.load(deps.storage)? + fee;
+    FEE_COLLECTED.save(deps.storage, &total_fee)?;
+
     // Handle the real "withdraw"
     let recipient = deps.api.addr_validate(info.sender.as_str())?;
     let msgs: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: token.to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Transfer {
             recipient: recipient.to_string(),
-            amount: amount,
+            amount: amount - fee,
         })?,
         funds: vec![],
     })];

@@ -12,3 +12,5 @@ pub struct ContractInfo {
 pub const CONTRACT_INFO: Item<ContractInfo> = Item::new("token_distributor");
 
 pub const WITHDRAWABLE: Map<Addr, Uint128> = Map::new("withdrawable");
+
+pub const FEE_COLLECTED: Item<Uint128> = Item::new("fee_collected");
