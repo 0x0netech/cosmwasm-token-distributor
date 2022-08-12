@@ -7,7 +7,7 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::error::ContractError;
-use crate::msg::{Cw20HookMsg, DepositMsg, ExecuteMsg, InstantiateMsg, QueryMsg, WithdrawMsg, WithdrawAllMsg, WithdrawableMsg};
+use crate::msg::{Cw20HookMsg, DepositMsg, ExecuteMsg, InstantiateMsg, QueryMsg, WithdrawMsg, WithdrawableMsg};
 use crate::state::{ContractInfo, CONTRACT_INFO, WITHDRAWABLE, FEE_COLLECTED};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
